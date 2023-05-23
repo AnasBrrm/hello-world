@@ -3,12 +3,14 @@ import sys
 import math
 import random
 import time
+from shapely.geometry import Point, Polygon
+
 
 
 pygame.init()
-largeur, hauteur = 800, 600
-fenetre = pygame.display.set_mode((largeur, hauteur))
-pygame.display.set_caption("Titre")
+longueur, hauteur = 800, 600
+fenetre = pygame.display.set_mode((longueur, hauteur))
+pygame.display.set_caption("Jumping Square")
 niv_actu = 0
 son = pygame.mixer.Sound("ressources/music1.mp3")
 saut_son = pygame.mixer.Sound("ressources/launch.wav")
@@ -20,13 +22,11 @@ for i in range(1, 6):
     bg_image = pygame.image.load(f"ressources/bg/{niv_actu}/{i}.png").convert_alpha()
     bg_images.append(bg_image)
 bg_width = bg_images[0].get_width()
-
-
 taille_bloc = 55
 vie = 3
 son.play()
 particule_active = False
-
+temps_fini = False
 
 
 def draw_bg():
@@ -36,7 +36,7 @@ def draw_bg():
         fenetre.blit(bg_image, (x_offset - bg_width, 0))
         fenetre.blit(bg_image, (x_offset, 0))
 
-def affiche_niveau(niv_actu):
+"""def affiche_niveau(niv_actu):
 
     texte = f"Niveau {niv_actu}"
     font = pygame.font.Font("ressources/altertype-Regular.otf", 100)
@@ -53,19 +53,19 @@ def affiche_niveau(niv_actu):
 
         pygame.display.flip()
 
-        time.sleep(0.01)  
+        time.sleep(0.01)  """
 class Camera:
-    def __init__(self, largeur, hauteur):
+    def __init__(self, longueur, hauteur):
         self.x = 0
         self.y = 0
-        self.largeur = largeur
+        self.longueur = longueur
         self.hauteur = hauteur
-        self.rect = pygame.Rect(self.x, self.y, self.largeur, self.hauteur)
+        self.rect = pygame.Rect(self.x, self.y, self.longueur, self.hauteur)
 
     def update(self, target):
-        self.x = target.x - self.largeur // 2 + target.taille // 2
+        self.x = target.x - self.longueur // 2 + target.taille // 2
         self.y = target.y - self.hauteur // 2 + target.taille // 2
-        self.rect = pygame.Rect(self.x, self.y, self.largeur, self.hauteur)
+        self.rect = pygame.Rect(self.x, self.y, self.longueur, self.hauteur)
 class Particulee:
     def __init__(self, x, y, vx, vy, vie):
         self.x = x
@@ -73,58 +73,37 @@ class Particulee:
         self.vx = vx
         self.vy = vy
         self.vie = vie
-"""def enregistrer_meilleur_score(score, niv_actu):
-    nom_fichier = f"meilleur_score_niv{niv_actu}.txt"
-    try:
-        # On essaye d'ouvrir le fichier en mode lecture
-        with open(f'meilleur_score_niv0.txt', "r") as fichier:
-            # Si le fichier existe, on récupère le meilleur score
-            meilleur_score = float(fichier.read())
-    except FileNotFoundError:
-        # Si le fichier n'existe pas, on considère que le meilleur score est 0
-        meilleur_score = 0
 
-    # On compare le score actuel au meilleur score
-    if score < meilleur_score:
-        # Si le score actuel est meilleur, on le sauvegarde
-        with open(f'meilleur_score_niv0.txt', "w") as fichier:
-            fichier.write(str(score))
-        return score
-    else:
-        # Sinon, on retourne le meilleur score précédent
-        return meilleur_score
 
-def lire_meilleur_score(niveau):
-    try:
-        with open(f'meilleur_score_niv0.txt', 'r') as fichier:
-            meilleur_score = fichier.read()
-            if meilleur_score:  # vérifie que la chaîne n'est pas vide
-                return float(meilleur_score)
-    except FileNotFoundError:  # si le fichier n'existe pas
-        pass
-
-    # Si le fichier est vide ou n'existe pas, renvoyer 0
-    return 0"""
-
-def write_to_file(niv_actu, text):
-    with open(f"mon_fichier.txt", 'w') as file:
+"""def write_to_file(niv_actu, text):
+    with open(f"meilleur_score_niv{niv_actu}.txt", 'w') as file:
         file.write(str(text))
-
+"""
 def read_from_file(niv_actu, score):
-    with open(f"mon_fichier.txt", 'r') as file:
+    with open(f"meilleur_score_niv{niv_actu}.txt", 'r') as file:
         content = file.read()
         float(content)
     if score < float(content) or float(content) ==0:
-        with open(f"mon_fichier.txt", 'w') as file:
+        with open(f"meilleur_score_niv{niv_actu}.txt", 'w') as file:
             file.write(str(score))
 def read(niv_actu):
-    with open(f"mon_fichier.txt", 'r') as file:
+    with open(f"meilleur_score_niv{niv_actu}.txt", 'r') as file:
         content = file.read() 
         return content
+  
+  
+  
+  
     
-# Usage
-#write_to_file('mon_fichier.txt', 'Bonjour, monde !')
+def point_in_triangle(p, p0, p1, p2):
+    def area(a, b, c):
+        return abs((a[0] - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (a[1] - c[1])) / 2.0
 
+    area_total = area(p0, p1, p2)
+    area1 = area(p, p1, p2)
+    area2 = area(p0, p, p2)
+    area3 = area(p0, p1, p)
+    return area_total == area1 + area2 + area3
 
 class Personnage:
     
@@ -150,9 +129,14 @@ class Personnage:
         dessiner_face_superieure_bloc_3d(fenetre, (236,123,29), self.x - camera.x, self.y-camera.y,self.taille, 10, 1)
     def maj_vitesse(self, gravite):
             self.vy += gravite
-            
+    
+    
+           
     def collision(self, taille_bloc):
         global niv_actu
+        global elapsed_time
+        global elapsedd_time
+        global temps_debut
         self.sur_le_sol = False
         perso_rect = pygame.Rect(self.x , self.y, (self.taille)-1, (self.taille)-1)
         self.collision_verif = False
@@ -162,6 +146,8 @@ class Personnage:
         new_x = self.x
         new_y = self.y
         
+        p = (self.x + self.taille / 2, self.y + self.taille)
+
         for i, ligne in enumerate(niveau[niv_actu]):
             for j, bloc in enumerate(ligne):
                 if bloc == 1 :
@@ -232,7 +218,7 @@ class Personnage:
                 if bloc == 5:
                     bloc_rect = pygame.Rect(j * taille_bloc, i * taille_bloc, taille_bloc, taille_bloc)
                     if perso_rect.colliderect(bloc_rect):
-                        new_x, new_y = 300,300
+                        new_x, new_y = 160,650
                         self.vx, self.vy = 0,0
                         self.vie -= 1
                         son_mort = True
@@ -241,14 +227,46 @@ class Personnage:
                 if bloc == 6:
                     bloc_rect = pygame.Rect(j * taille_bloc, i * taille_bloc, taille_bloc, taille_bloc)
                     if perso_rect.colliderect(bloc_rect):
-                        temps_fin = time.time()  # arrêter le chronomètre
-                        score = temps_fin - temps_debut  # calculer le score
-                        write_to_file("mon_fichier.txt", score)
-                        read_from_file("mon_fichier.txt", score)
+                        temps_fin = time.time()  
+                        score = temps_fin - temps_debut
+                        print(score)                     
+                        #write_to_file(niv_actu, score)
+                        read_from_file(niv_actu, score)
+                        new_x, new_y = 160,650
                         niv_actu += 1
-                        self.x, self.y = 300,300
-                        self.vx, self.vy = 0,0
-                        affiche_niveau(niv_actu)
+                        
+                        personnage.vx, personnage.vy = 0,0
+                        
+                        
+                        temps_debut = time.time()
+                        elapsed_time = pygame.time.get_ticks() / 1000
+                        elapsedd_time = ((pygame.time.get_ticks() / 1000)) - elapsed_time
+
+                        #affiche_niveau(niv_actu)
+                if bloc == 7:
+                    p0 = (j * taille_bloc + taille_bloc / 2, (i + 1) * taille_bloc)  # Pointe en bas
+                    p1 = (j * taille_bloc, i * taille_bloc)  # Base gauche
+                    p2 = ((j + 1) * taille_bloc, i * taille_bloc)  # Base droite
+
+                    if point_in_triangle(p, p0, p1, p2):
+                        # Collision détectée
+                        self.vie -= 1
+                        self.x, self.y = 300, 300
+                        self.vx, self.vy = 0, 0
+                        break                     
+                        
+                if bloc == 8:
+                    p0 = (j * taille_bloc + taille_bloc / 2, i * taille_bloc)  
+                    p1 = (j * taille_bloc, (i + 1) * taille_bloc) 
+                    p2 = ((j + 1) * taille_bloc, (i + 1) * taille_bloc)  
+
+                    if point_in_triangle(p, p0, p1, p2):
+                        self.vie -= 1
+                        self.x, self.y = 300, 300
+                        print("test")
+                        self.vx = 0
+                        self.vy = 0
+                        break
 
                 if bloc == 9 :
                     if (pygame.time.get_ticks() // 2000) % 2 == 0:
@@ -276,9 +294,6 @@ class Personnage:
         self.y = new_y
 
 
-
-
-    
     
 class Particule:
     def __init__(self, x, y, taille, couleur, duree_vie):
@@ -321,20 +336,6 @@ class WaterParticle:
         self.camera = camera
         self.rect = pygame.Rect(x - camera.x, y - camera.y, size, size)
 
-"""class Score:
-    def Best_score(perso_rect) :
-        if event.type == pygame.MOUSEBUTTONUP:
-            if deplacement_actif:
-                debut_course=time.time()
-                for i, ligne in enumerate(niveau[niv_actu]):
-                    for j, bloc in enumerate(ligne):
-                        if bloc == 6:
-                            bloc_rect = pygame.Rect(j * taille_bloc, i * taille_bloc, taille_bloc, taille_bloc)
-                            if perso_rect.colliderect(bloc_rect):
-                                fin_course = time.time()
-                score = fin_course - debut_course
-                #return score
-                print(score)"""
                 
 def generate_water_particles(niveau, taille_bloc, camera, generation_probability=0.02):
     water_particles = []
@@ -349,8 +350,6 @@ def generate_water_particles(niveau, taille_bloc, camera, generation_probability
                     water_particle = WaterParticle(x, y, size, speed, camera)
                     water_particles.append(water_particle)
     return water_particles
-
-
 
 
 def create_explosion(x, y, particule):
@@ -383,7 +382,7 @@ niveau = [[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,2,2,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[1,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,0,1,1,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,0,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,1,1,1,1,1,1,1,5,5,5,5,1,1,1,5,5,1,1,5,5,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -444,8 +443,8 @@ niveau = [[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,7,7,0,0,0,1,0],
 [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0,0,0,0,0,1,0],
 [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,3,0,1,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0],
-[ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1,0],
-[ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0],
+[ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,6,6,6,1,1,0],
+[ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,6,6,6,1,0,0],
 [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0]]]
 
 
@@ -648,10 +647,10 @@ clock = pygame.time.Clock()
 gravite = 0.2
 vitesse_lancer = 10
 force_max = 200
-camera = Camera(largeur, hauteur)
+camera = Camera(longueur, hauteur)
 deplacement_actif = False
 clic_initial = None
-niveau_surface = pygame.Surface((largeur, hauteur), pygame.SRCALPHA)
+niveau_surface = pygame.Surface((longueur, hauteur), pygame.SRCALPHA)
 personnage = Personnage(160, 650, 25)
 trail_particles = []
 trail_frequency = 2
@@ -660,10 +659,11 @@ scroll = 0
 particles = []
 water_particles = []
 persoo_rect = pygame.Rect(personnage.x, personnage.y, personnage.taille, personnage.taille)
-
-
 debut_course=time.time()
+font = pygame.font.Font("ressources/altertype-Regular.otf", 36)
+bg_menu = pygame.image.load("ressources/bg_menu.png")
 
+fontt = "ressources/altertype-Regular.otf"
 
 
 def traiter_deplacement(personnage, deplacement_actif, clic_initial, force_max, vitesse_lancer, gravite):
@@ -676,9 +676,6 @@ def traiter_deplacement(personnage, deplacement_actif, clic_initial, force_max, 
             if not deplacement_actif:
                 clic_initial = pygame.mouse.get_pos()
                 deplacement_actif = True
-            elif not personnage.sur_le_sol:
-                personnage.vx *= 0.9
-                personnage.vy *= 0.9
 
         if event.type == pygame.MOUSEBUTTONUP:
             if deplacement_actif:
@@ -731,9 +728,6 @@ def gerer_particles_explosion(explosion_particles, niveau, taille_bloc):
     return explosion_particles
 
 
-# Créer une font
-font = pygame.font.Font("ressources/altertype-Regular.otf", 36)
-bg_menu = pygame.image.load("ressources/bg_menu.png")
 
 def afficher_menu(pos_souris):
     
@@ -741,8 +735,8 @@ def afficher_menu(pos_souris):
     jouer_text = font.render("Jouer", True, (255,255,255))  
     quitter_text = font.render("Quitter", True, (255,255,255))  
     
-    jouer_rect = jouer_text.get_rect(center=((largeur/2), 150))  
-    quitter_rect = quitter_text.get_rect(center=((largeur/2), 200))  
+    jouer_rect = jouer_text.get_rect(center=((longueur/2), 150))  
+    quitter_rect = quitter_text.get_rect(center=((longueur/2), 200))  
 
    
     if jouer_rect.collidepoint(pos_souris):
@@ -758,7 +752,7 @@ def afficher_menu(pos_souris):
 def afficher_menu_niveaux(pos_souris):
     fenetre.blit(bg_menu, (0, 0))
 
-    niv1s = read("mon_fichier.txt")
+    niv1s = read(0)
     niv2s = read(1)
     niv3s = read(2)
     niv4s= read(3)
@@ -772,10 +766,10 @@ def afficher_menu_niveaux(pos_souris):
     niv4_score = font.render("Meilleur score : "+ str(niv4s) , True, (255,255,255))
 
 
-    niv1_rect = niv1_text.get_rect(center=((largeur/2), 100))
-    niv2_rect = niv2_text.get_rect(center=((largeur/2), 150))
-    niv3_rect = niv3_text.get_rect(center=((largeur/2), 200))
-    niv4_rect = niv4_text.get_rect(center=((largeur/2), 250))
+    niv1_rect = niv1_text.get_rect(center=((longueur/2), 100))
+    niv2_rect = niv2_text.get_rect(center=((longueur/2), 150))
+    niv3_rect = niv3_text.get_rect(center=((longueur/2), 200))
+    niv4_rect = niv4_text.get_rect(center=((longueur/2), 250))
 
 
     if niv1_rect.collidepoint(pos_souris):
@@ -803,16 +797,16 @@ def afficher_menu_niveaux(pos_souris):
 
 
 
-fontt = "ressources/altertype-Regular.otf"
-bg_menu = pygame.image.load("ressources/bg_menu.png")
+
 fenetre.blit(bg_menu, (0, 0))
 running = True
 menu_actif = True
 niveaux_actif = False
 jouer_rect, quitter_rect = None, None
 niv1_rect, niv2_rect, niv3_rect = None, None, None
-while running:
 
+while running:
+    global elapsed_time
     pos_souris = pygame.mouse.get_pos()
 
     if menu_actif:
@@ -837,43 +831,38 @@ while running:
                     temps_debut = time.time()
                     elapsed_time = pygame.time.get_ticks() / 1000  
 
-                    running = False  # On quitte la boucle principale
+                    running = False  
                 elif niv2_rect.collidepoint(pos_souris):
                     niv_actu = 1
                     temps_debut = time.time()
                     elapsed_time = pygame.time.get_ticks() / 1000  
 
-                    running = False  # On quitte la boucle principale
+                    running = False 
                 elif niv3_rect.collidepoint(pos_souris):
                     niv_actu = 2
                     temps_debut = time.time()
                     elapsed_time = pygame.time.get_ticks() / 1000  
 
-                    running = False  # On quitte la boucle principale
+                    running = False  
                 elif niv4_rect.collidepoint(pos_souris):
                     niv_actu = 3
                     temps_debut = time.time()
                     elapsed_time = pygame.time.get_ticks() / 1000  
 
-                    running = False  # On quitte la boucle principale
-
+                    running = False  
 
     pygame.display.flip()
 
 
 
 debut_course=time.time()
+bg =  pygame.image.load(f"ressources/bg/{niv_actu}/1.png").convert_alpha()
 while True:
     elapsedd_time = ((pygame.time.get_ticks() / 1000)) - elapsed_time
     debut_course=time.time()
-    clock.tick(60)
+    
     scroll -= personnage.vx
-    bg_images = []
-    for i in range(1, 6):
-            bg_image = pygame.image.load(f"ressources/bg/{niv_actu}/{i}.png").convert_alpha()
-            bg_images.append(bg_image)
-            bg_width = bg_images[0].get_width()
-    draw_bg()
+    fenetre.blit(bg, (0, 0))
     dessiner_plateformes(fenetre, niveau[niv_actu], taille_bloc, camera)
 
     if personnage.sur_le_sol:
@@ -891,7 +880,6 @@ while True:
             camera.update(personnage)
     personnage.dessiner(fenetre, camera)
 
-
     if personnage.sur_le_sol:
             personnage.vx *= 0.2
             if abs(personnage.vx) < 0.1:
@@ -902,11 +890,12 @@ while True:
 
     texxt = font.render(f'{elapsedd_time:.1f}', True, (255, 255, 255))
 
-    fenetre.blit(texxt, (largeur/2, 20))  
-
-        
+    fenetre.blit(texxt, (longueur/2, 20))  
+    score_best = float(read(niv_actu))
+    text_score = font.render(f'{score_best:.1f}', True, (255, 255, 255))
+    fenetre.blit(text_score, (50, 500))
     text = font.render("❤"*personnage.vie, False, "red")
     fenetre.blit(text, (500, 20))
     pygame.display.flip()
-    
+    clock.tick(60)
 
